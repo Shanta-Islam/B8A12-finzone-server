@@ -62,6 +62,12 @@ async function run() {
       const result = await postsCollection.find().toArray();
       res.send(result);
     })
+    app.get('/recentPosts/:email', async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
+      const result = await postsCollection.find(query).sort({ date: -1 }).limit(3).toArray();
+      res.send(result);
+    })
     app.get('/post/:id', async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
@@ -112,6 +118,83 @@ async function run() {
       const result = await announcementCollection.insertOne(item);
       res.send(result);
     });
+    // app.post('/:id/like/:email', async (req, res) => {
+    //   const id = req.params.id;
+    //   const email = req.params.email;
+    //   const query = { _id: new ObjectId(id) };
+    //   const filter = { email: email };
+    //   const existingUser = await postsCollection.findOne(filter);
+    //   if (existingUser.upVote ==1) {
+    //     return res.send({ message: 'user already exists', modifiedCount: null })
+    //   }
+    //   const updatedDoc = {
+    //     $inc: {
+    //       upVote: 1
+    //     }
+
+    //   }
+    //   const result = await postsCollection.updateOne(query, updatedDoc);
+    //   res.send(result);
+
+    // });
+
+
+    app.post('/:id/like/:email', async (req, res) => {
+      const id = req.params.id;
+      const email = req.params.email;
+      const query = { _id: new ObjectId(id), email: email };
+      const existingUser = await postsCollection.findOne(query);
+
+      if (!existingUser) {
+        // User does not exist, you might want to handle this case accordingly
+        return res.send({ message: 'User not found', modifiedCount: null });
+      }
+
+      if (existingUser.upVote === 1) {
+        return res.send({ message: 'User already upvoted', modifiedCount: null });
+      }
+
+      const updatedDoc = {
+        $inc: {
+          upVote: 1
+        }
+      };
+
+      const result = await postsCollection.updateOne(query, updatedDoc);
+      res.send(result);
+    });
+
+    app.post('/:id/dislike/:email', async (req, res) => {
+      const id = req.params.id;
+      const email = req.params.email;
+      const query = { _id: new ObjectId(id), email: email };
+      const existingUser = await postsCollection.findOne(query);
+    
+      if (!existingUser) {
+        // User does not exist, you might want to handle this case accordingly
+        return res.send({ message: 'User not found', modifiedCount: null });
+      }
+    
+      if (existingUser.downVote === 1) {
+        return res.send({ message: 'User already disliked', modifiedCount: null });
+      }
+    
+      const updatedDoc = {
+        $inc: {
+          downVote: 1
+        }
+      };
+    
+      const result = await postsCollection.updateOne(query, updatedDoc);
+      res.send(result);
+    });
+    app.delete('/post/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) }
+      const result = await postsCollection.deleteOne(query);
+      res.send(result);
+    });
+
     // // Send a ping to confirm a successful connection
     // await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
