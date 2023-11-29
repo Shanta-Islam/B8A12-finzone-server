@@ -77,9 +77,16 @@ async function run() {
     app.get('/posts/:email', async (req, res) => {
       const email = req.params.email;
       const query = { email: email };
-      const post = await postsCollection.find(query).toArray();
+      const page = parseInt(req.query.page);
+      const size = parseInt(req.query.size);
+      const post = await postsCollection.find(query).skip(page*size).limit(size).toArray();
       res.send(post);
     })
+    app.get('/postsCount', async (req, res) => {
+      const count = await postsCollection.estimatedDocumentCount();
+      res.send({ count });
+    });
+
     app.get('/users', verifyToken, async (req, res) => {
       const query = {};
       const users = await usersCollection.find(query).toArray();
