@@ -1,9 +1,11 @@
+
 const express = require('express');
 const app = express();
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
-const port = process.env.PORT || 5000;
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const port = process.env.PORT || 5000; 
 
 // middleware
 app.use(cors());
@@ -31,6 +33,8 @@ async function run() {
     const usersCollection = client.db("finzoneUser").collection("users");
     const postsCollection = client.db("finzoneUser").collection("posts");
     const announcementCollection = client.db("finzoneUser").collection("announcements");
+    const commentCollection = client.db("finzoneUser").collection("comments");
+    const tagsCollection = client.db("finzoneUser").collection("tags");
 
 
 
@@ -58,8 +62,58 @@ async function run() {
       })
     }
 
+
+    const verifyAdmin = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { email: email };
+      const user = await usersCollection.findOne(query);
+      const isAdmin = user?.role === 'admin';
+      if (!isAdmin) {
+        return res.status(403).send({ message: 'forbidden access' });
+      }
+      next();
+    }
+
+
+    app.get('/users/admin/:email', verifyToken, async (req, res) => {
+      const email = req.params.email;
+
+      if (email !== req.decoded.email) {
+        return res.status(403).send({ message: 'forbidden access' })
+      }
+
+      const query = { email: email };
+      const user = await usersCollection.findOne(query);
+      let admin = false;
+      if (user) {
+        admin = user?.role === 'admin';
+      }
+      res.send({ admin });
+    })
+
     app.get('/posts', async (req, res) => {
-      const result = await postsCollection.find().toArray();
+      const page = parseInt(req.query.page);
+      const size = parseInt(req.query.size);
+      // const filter = req.query;
+      // const query = {};
+      // const options = {
+      //   sort :{
+
+      //   }
+      // }
+      // const result1 = await postsCollection.aggregate([
+      //   {
+      //     $addFields: {
+      //     voteDifference:{$subtract: ["$upVote", "$downVote"]} 
+      //     }
+      //     },
+      //     {
+      //     $sort: { voteDifference: -1 }
+      //     }
+
+      // ]).toArray();
+      // console.log(result1)
+      const result = await postsCollection.find().skip(page * size).limit(size).sort({ date: -1 }).toArray();
       res.send(result);
     })
     app.get('/recentPosts/:email', async (req, res) => {
@@ -82,12 +136,22 @@ async function run() {
       const post = await postsCollection.find(query).skip(page * size).limit(size).toArray();
       res.send(post);
     })
+
     app.get('/postsCount', async (req, res) => {
-      const count = await postsCollection.estimatedDocumentCount();
-      res.send({ count });
+      const userEmail = req.params.email;
+      const count = await postsCollection.estimatedDocumentCount({ email: userEmail });
+      res.json({ count });
+
+    });
+    app.get('/post', async (req, res) => {
+      const query = req.body;
+      console.log(query);
+      const result = await postsCollection.find().toArray();
+      res.json(result);
+
     });
 
-    app.get('/users', verifyToken, async (req, res) => {
+    app.get('/users', verifyToken, verifyAdmin, async (req, res) => {
       const query = {};
       const page = parseInt(req.query.page);
       const size = parseInt(req.query.size);
@@ -103,6 +167,17 @@ async function run() {
       const query = { email: email };
       const user = await usersCollection.findOne(query);
       res.send(user);
+    })
+    app.patch('/users/admin/:id', verifyToken, verifyAdmin, async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updatedDoc = {
+        $set: {
+          role: 'admin'
+        }
+      }
+      const result = await usersCollection.updateOne(filter, updatedDoc);
+      res.send(result);
     })
     app.get('/announcements', async (req, res) => {
       const query = {};
@@ -137,51 +212,89 @@ async function run() {
       const result = await announcementCollection.insertOne(item);
       res.send(result);
     });
-    // app.post('/:id/like/:email', async (req, res) => {
-    //   const id = req.params.id;
-    //   const email = req.params.email;
-    //   const query = { _id: new ObjectId(id) };
-    //   const filter = { email: email };
-    //   const existingUser = await postsCollection.findOne(filter);
-    //   if (existingUser.upVote ==1) {
-    //     return res.send({ message: 'user already exists', modifiedCount: null })
-    //   }
-    //   const updatedDoc = {
-    //     $inc: {
-    //       upVote: 1
-    //     }
-
-    //   }
-    //   const result = await postsCollection.updateOne(query, updatedDoc);
+    // app.get('/comments', async (req, res) => {
+    //   const result = await commentCollection.find().toArray();
     //   res.send(result);
+    // });
+    // app.get('/comment/:id', async (req, res) => {
+    //   const id = req.params.id;
+    //   const filter = { _id: new ObjectId(id) }
+    //   // console.log(filter); 
+    //   const result = await commentCollection.findOne(filter);
+    //   res.send(result);
+    // });
+    app.get('/postComments/:postId', async (req, res) => {
+      const postId = req.params.postId;
+      const filter = { postId: postId }
+      const result = await commentCollection.find(filter).toArray();
+      res.json(result);
+    });
+    app.get('/commentsCount', async (req, res) => {
+      const count = await commentCollection.estimatedDocumentCount();
+      res.send({ count });
+    });
+    app.post('/comments', async (req, res) => {
+      const item = req.body;
+      const result = await commentCollection.insertOne(item);
+      res.send(result);
+    });
+    app.get('/admin-stats', verifyToken, verifyAdmin, async (req, res) => {
+      const post = await postsCollection.estimatedDocumentCount();
+      const user = await usersCollection.estimatedDocumentCount();
+      const comments = await commentCollection.estimatedDocumentCount();
+      res.send({
+        post,
+        user,
+        comments
+      });
+    })
+
+    // app.patch('/:id/like', async (req, res) => {
+    //   // const id = req.params.id;
+    //   // const query = { _id: new ObjectId(id) };
+    //   // const user = req.body;
+    //   // const filter = { email: user.email }
+    //   // const existingUser = await postsCollection.findOne(filter);
+    //   // console.log(existingUser)
+    //   // if (existingUser) {
+    //   //   return res.send({ message: 'user already exists', modifiedCount: null })
+    //   // }
+    //   // const updatedDoc = {
+    //   //   $inc: {
+    //   //     upVote: 1
+    //   //   }
+
+    //   // }
+    //   // const result = await postsCollection.updateOne(query, updatedDoc);
+    //   // res.send(result);
 
     // });
 
 
-    app.post('/:id/like/:email', async (req, res) => {
-      const id = req.params.id;
-      const email = req.params.email;
-      const query = { _id: new ObjectId(id), email: email };
-      const existingUser = await postsCollection.findOne(query);
+    // app.post('/:id/like/:email', async (req, res) => {
+    //   const id = req.params.id;
+    //   const email = req.params.email;
+    //   const query = { _id: new ObjectId(id), email: email };
+    //   const existingUser = await postsCollection.findOne(query);
 
-      if (!existingUser) {
-        // User does not exist, you might want to handle this case accordingly
-        return res.send({ message: 'User not found', modifiedCount: null });
-      }
+    //   // if (!existingUser) {
+    //   //   // User does not exist, you might want to handle this case accordingly
+    //   //   return res.send({ message: 'User not found', modifiedCount: null });
+    //   // }
+    //   console.log(existingUser)
+    //   // if (existingUser) {
+    //   //   return res.send({ message: 'User already upvoted', modifiedCount: null });
+    //   // }
 
-      if (existingUser.upVote === 1) {
-        return res.send({ message: 'User already upvoted', modifiedCount: null });
-      }
+    //   // const updatedDoc = {
+    //   //   $inc: {
+    //   //     upVote: 1
+    //   //   }
+    //   // };
 
-      const updatedDoc = {
-        $inc: {
-          upVote: 1
-        }
-      };
-
-      const result = await postsCollection.updateOne(query, updatedDoc);
-      res.send(result);
-    });
+    //   // const result = await postsCollection.updateOne(query, updatedDoc);
+    //   // res.send(result);
+    // });
 
     app.post('/:id/dislike/:email', async (req, res) => {
       const id = req.params.id;
@@ -207,12 +320,45 @@ async function run() {
       const result = await postsCollection.updateOne(query, updatedDoc);
       res.send(result);
     });
+    app.get('/tags', async (req, res) => {
+      const result = await tagsCollection.find().toArray();
+      res.send(result);
+    });
+    app.post('/tags', async (req, res) => {
+      const tagItem = req.body;
+      const result = await tagsCollection.insertOne(tagItem);
+      res.send(result);
+    });
     app.delete('/post/:id', async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) }
       const result = await postsCollection.deleteOne(query);
       res.send(result);
     });
+
+    app.post("/payment", cors(), async (req, res) => {
+      let { amount, id } = req.body
+      try {
+        const payment = await stripe.paymentIntents.create({
+          amount,
+          currency: "USD",
+          description: "Spatula company",
+          payment_method: id,
+          confirm: true
+        })
+        console.log("Payment", payment)
+        res.json({
+          message: "Payment successful",
+          success: true
+        })
+      } catch (error) {
+        console.log("Error", error)
+        res.json({
+          message: "Payment failed",
+          success: false
+        })
+      }
+    })
 
     // // Send a ping to confirm a successful connection
     // await client.db("admin").command({ ping: 1 });
