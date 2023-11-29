@@ -79,7 +79,7 @@ async function run() {
       const query = { email: email };
       const page = parseInt(req.query.page);
       const size = parseInt(req.query.size);
-      const post = await postsCollection.find(query).skip(page*size).limit(size).toArray();
+      const post = await postsCollection.find(query).skip(page * size).limit(size).toArray();
       res.send(post);
     })
     app.get('/postsCount', async (req, res) => {
@@ -89,9 +89,15 @@ async function run() {
 
     app.get('/users', verifyToken, async (req, res) => {
       const query = {};
-      const users = await usersCollection.find(query).toArray();
+      const page = parseInt(req.query.page);
+      const size = parseInt(req.query.size);
+      const users = await usersCollection.find(query).skip(page * size).limit(size).toArray();
       res.send(users);
     })
+    app.get('/usersCount', async (req, res) => {
+      const count = await usersCollection.estimatedDocumentCount();
+      res.send({ count });
+    });
     app.get('/user/:email', async (req, res) => {
       const email = req.params.email;
       const query = { email: email };
@@ -100,8 +106,14 @@ async function run() {
     })
     app.get('/announcements', async (req, res) => {
       const query = {};
-      const result = await announcementCollection.find(query).toArray();
+      const page = parseInt(req.query.page);
+      const size = parseInt(req.query.size);
+      const result = await announcementCollection.find(query).skip(page * size).limit(size).toArray();
       res.send(result);
+    });
+    app.get('/announcementsCount', async (req, res) => {
+      const count = await announcementCollection.estimatedDocumentCount();
+      res.send({ count });
     });
     app.post('/users', async (req, res) => {
       const user = req.body;
@@ -176,22 +188,22 @@ async function run() {
       const email = req.params.email;
       const query = { _id: new ObjectId(id), email: email };
       const existingUser = await postsCollection.findOne(query);
-    
+
       if (!existingUser) {
         // User does not exist, you might want to handle this case accordingly
         return res.send({ message: 'User not found', modifiedCount: null });
       }
-    
+
       if (existingUser.downVote === 1) {
         return res.send({ message: 'User already disliked', modifiedCount: null });
       }
-    
+
       const updatedDoc = {
         $inc: {
           downVote: 1
         }
       };
-    
+
       const result = await postsCollection.updateOne(query, updatedDoc);
       res.send(result);
     });
