@@ -262,7 +262,7 @@ async function run() {
     });
 
     // announcement api
-    app.get('/announcements',verifyToken, verifyAdmin, async (req, res) => {
+    app.get('/announcements', async (req, res) => {
       const query = {};
       const page = parseInt(req.query.page);
       const size = parseInt(req.query.size);
@@ -273,7 +273,7 @@ async function run() {
       const count = await announcementCollection.estimatedDocumentCount();
       res.send({ count });
     });
-    app.post('/announcement', verifyToken, verifyAdmin,async (req, res) => {
+    app.post('/announcement',verifyToken, verifyAdmin, async (req, res) => {
       const item = req.body;
       const result = await announcementCollection.insertOne(item);
       res.send(result);
