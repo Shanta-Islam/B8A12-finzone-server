@@ -175,13 +175,13 @@ async function run() {
       // console.log(count)
 
     });
-    app.get('/recentPosts/:email', async (req, res) => {
+    app.get('/recentPosts/:email', verifyToken,async (req, res) => {
       const email = req.params.email;
       const query = { email: email };
       const result = await postsCollection.find(query).sort({ date: -1 }).limit(3).toArray();
       res.send(result);
     })
-    app.get('/posts/:email', async (req, res) => {
+    app.get('/posts/:email', verifyToken,async (req, res) => {
       const email = req.params.email;
       const query = { email: email };
       const page = parseInt(req.query.page);
@@ -209,14 +209,14 @@ async function run() {
       const result = await postsCollection.findOne(query);
       res.send(result);
     })
-    app.delete('/post/:id', async (req, res) => {
+    app.delete('/post/:id', verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) }
       const result = await postsCollection.deleteOne(query);
       res.send(result);
     });
 
-    app.patch('/:id/like', async (req, res) => {
+    app.patch('/:id/like', verifyToken,async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const user = req.body;
@@ -237,7 +237,7 @@ async function run() {
 
     });
 
-    app.patch('/:id/dislike', async (req, res) => {
+    app.patch('/:id/dislike',verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       // const existingUser = await postsCollection.findOne(query);
@@ -262,7 +262,7 @@ async function run() {
     });
 
     // announcement api
-    app.get('/announcements', async (req, res) => {
+    app.get('/announcements',verifyToken, verifyAdmin, async (req, res) => {
       const query = {};
       const page = parseInt(req.query.page);
       const size = parseInt(req.query.size);
@@ -273,7 +273,7 @@ async function run() {
       const count = await announcementCollection.estimatedDocumentCount();
       res.send({ count });
     });
-    app.post('/announcement', async (req, res) => {
+    app.post('/announcement', verifyToken, verifyAdmin,async (req, res) => {
       const item = req.body;
       const result = await announcementCollection.insertOne(item);
       res.send(result);
@@ -281,18 +281,18 @@ async function run() {
 
     // comments api
 
-    app.get('/comments', async (req, res) => {
+    app.get('/comments', verifyToken, async (req, res) => {
       const result = await commentCollection.find().toArray();
       res.send(result);
     });
-    app.get('/comment/:id', async (req, res) => {
+    app.get('/comment/:id',verifyToken, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) }
       // console.log(filter); 
       const result = await commentCollection.findOne(filter);
       res.send(result);
     });
-    app.get('/postComments/:postId', async (req, res) => {
+    app.get('/postComments/:postId',verifyToken, async (req, res) => {
       const postId = req.params.postId;
       const filter = { postId: postId }
       const page = parseInt(req.query.page);
@@ -307,7 +307,7 @@ async function run() {
       res.send({ count });
       // console.log(count);
     });
-    app.post('/comments', async (req, res) => {
+    app.post('/comments', verifyToken,async (req, res) => {
       const item = req.body;
       const result = await commentCollection.insertOne(item);
       res.send(result);
@@ -326,7 +326,7 @@ async function run() {
     })
 
     //reports api
-    app.get('/reports', async (req, res) => {
+    app.get('/reports', verifyToken, verifyAdmin,async (req, res) => {
       const query = {};
       const page = parseInt(req.query.page);
       const size = parseInt(req.query.size);
