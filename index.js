@@ -343,7 +343,7 @@ async function run() {
       res.send(result);
     });
 
-    // tags api
+    // tags api 
     app.get('/tags', async (req, res) => {
       const result = await tagsCollection.find().toArray();
       res.send(result);
