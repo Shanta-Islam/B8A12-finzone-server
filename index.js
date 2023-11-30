@@ -35,6 +35,7 @@ async function run() {
     const announcementCollection = client.db("finzoneUser").collection("announcements");
     const commentCollection = client.db("finzoneUser").collection("comments");
     const tagsCollection = client.db("finzoneUser").collection("tags");
+    const reportCollection = client.db("finzoneUser").collection("reports");
 
 
 
@@ -74,6 +75,7 @@ async function run() {
       next();
     }
 
+    // users api
 
     app.get('/users/admin/:email', verifyToken, async (req, res) => {
       const email = req.params.email;
@@ -90,67 +92,6 @@ async function run() {
       }
       res.send({ admin });
     })
-
-    app.get('/posts', async (req, res) => {
-      const page = parseInt(req.query.page);
-      const size = parseInt(req.query.size);
-      // const filter = req.query;
-      // const query = {};
-      // const options = {
-      //   sort :{
-
-      //   }
-      // }
-      // const result1 = await postsCollection.aggregate([
-      //   {
-      //     $addFields: {
-      //     voteDifference:{$subtract: ["$upVote", "$downVote"]} 
-      //     }
-      //     },
-      //     {
-      //     $sort: { voteDifference: -1 }
-      //     }
-
-      // ]).toArray();
-      // console.log(result1)
-      const result = await postsCollection.find().skip(page * size).limit(size).sort({ date: -1 }).toArray();
-      res.send(result);
-    })
-    app.get('/recentPosts/:email', async (req, res) => {
-      const email = req.params.email;
-      const query = { email: email };
-      const result = await postsCollection.find(query).sort({ date: -1 }).limit(3).toArray();
-      res.send(result);
-    })
-    app.get('/post/:id', async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: new ObjectId(id) };
-      const result = await postsCollection.findOne(query);
-      res.send(result);
-    })
-    app.get('/posts/:email', async (req, res) => {
-      const email = req.params.email;
-      const query = { email: email };
-      const page = parseInt(req.query.page);
-      const size = parseInt(req.query.size);
-      const post = await postsCollection.find(query).skip(page * size).limit(size).toArray();
-      res.send(post);
-    })
-
-    app.get('/postsCount', async (req, res) => {
-      const userEmail = req.params.email;
-      const count = await postsCollection.estimatedDocumentCount({ email: userEmail });
-      res.json({ count });
-
-    });
-    app.get('/post', async (req, res) => {
-      const query = req.body;
-      console.log(query);
-      const result = await postsCollection.find().toArray();
-      res.json(result);
-
-    });
-
     app.get('/users', verifyToken, verifyAdmin, async (req, res) => {
       const query = {};
       const page = parseInt(req.query.page);
@@ -179,17 +120,6 @@ async function run() {
       const result = await usersCollection.updateOne(filter, updatedDoc);
       res.send(result);
     })
-    app.get('/announcements', async (req, res) => {
-      const query = {};
-      const page = parseInt(req.query.page);
-      const size = parseInt(req.query.size);
-      const result = await announcementCollection.find(query).skip(page * size).limit(size).toArray();
-      res.send(result);
-    });
-    app.get('/announcementsCount', async (req, res) => {
-      const count = await announcementCollection.estimatedDocumentCount();
-      res.send({ count });
-    });
     app.post('/users', async (req, res) => {
       const user = req.body;
       const query = { email: user.email }
@@ -201,55 +131,88 @@ async function run() {
       res.send(result);
     });
 
+
+    //post api
+    app.get('/post', async (req, res) => {
+      const query = req.body;
+      console.log(query);
+      const result = await postsCollection.find().toArray();
+      res.json(result);
+
+    });
+    app.get('/posts', async (req, res) => {
+      const page = parseInt(req.query.page);
+      const size = parseInt(req.query.size);
+      // const filter = req.query;
+      // const query = {};
+      // const options = {
+      //   sort :{
+
+      //   }
+      // }
+      // const result1 = await postsCollection.aggregate([
+      //   {
+      //     $addFields: {
+      //     voteDifference:{$subtract: ["$upVote", "$downVote"]} 
+      //     }
+      //     },
+      //     {
+      //     $sort: { voteDifference: -1 }
+      //     }
+
+      // ]).toArray();
+      // console.log(result1)
+      const result = await postsCollection.find().skip(page * size).limit(size).sort({ date: -1 }).toArray();
+      res.send(result);
+    })
+    app.get('/postsCount', async (req, res) => {
+      const count = await postsCollection.estimatedDocumentCount();
+      res.json({ count });
+      // console.log(count)
+
+    });
+    app.get('/recentPosts/:email', async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
+      const result = await postsCollection.find(query).sort({ date: -1 }).limit(3).toArray();
+      res.send(result);
+    })
+    app.get('/posts/:email', async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
+      const page = parseInt(req.query.page);
+      const size = parseInt(req.query.size);
+      const post = await postsCollection.find(query).skip(page * size).limit(size).toArray();
+      res.send(post);
+      // console.log(post)
+    })
+    app.get('/postsCount/:email', async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
+      const count = await postsCollection.countDocuments(query);
+      res.json({ count });
+      console.log(count)
+
+    });
     app.post('/posts', async (req, res) => {
       const postItem = req.body;
       const result = await postsCollection.insertOne(postItem);
       res.send(result);
     });
-
-    app.post('/announcement', async (req, res) => {
-      const item = req.body;
-      const result = await announcementCollection.insertOne(item);
+    app.get('/post/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await postsCollection.findOne(query);
       res.send(result);
-    });
-    // app.get('/comments', async (req, res) => {
-    //   const result = await commentCollection.find().toArray();
-    //   res.send(result);
-    // });
-    // app.get('/comment/:id', async (req, res) => {
-    //   const id = req.params.id;
-    //   const filter = { _id: new ObjectId(id) }
-    //   // console.log(filter); 
-    //   const result = await commentCollection.findOne(filter);
-    //   res.send(result);
-    // });
-    app.get('/postComments/:postId', async (req, res) => {
-      const postId = req.params.postId;
-      const filter = { postId: postId }
-      const result = await commentCollection.find(filter).toArray();
-      res.json(result);
-    });
-    app.get('/commentsCount', async (req, res) => {
-      const count = await commentCollection.estimatedDocumentCount();
-      res.send({ count });
-    });
-    app.post('/comments', async (req, res) => {
-      const item = req.body;
-      const result = await commentCollection.insertOne(item);
-      res.send(result);
-    });
-    app.get('/admin-stats', verifyToken, verifyAdmin, async (req, res) => {
-      const post = await postsCollection.estimatedDocumentCount();
-      const user = await usersCollection.estimatedDocumentCount();
-      const comments = await commentCollection.estimatedDocumentCount();
-      res.send({
-        post,
-        user,
-        comments
-      });
     })
+    app.delete('/post/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) }
+      const result = await postsCollection.deleteOne(query);
+      res.send(result);
+    });
 
-    // app.patch('/:id/like', async (req, res) => {
+     // app.patch('/:id/like', async (req, res) => {
     //   // const id = req.params.id;
     //   // const query = { _id: new ObjectId(id) };
     //   // const user = req.body;
@@ -295,7 +258,6 @@ async function run() {
     //   // const result = await postsCollection.updateOne(query, updatedDoc);
     //   // res.send(result);
     // });
-
     app.post('/:id/dislike/:email', async (req, res) => {
       const id = req.params.id;
       const email = req.params.email;
@@ -320,6 +282,90 @@ async function run() {
       const result = await postsCollection.updateOne(query, updatedDoc);
       res.send(result);
     });
+
+    // announcement api
+    app.get('/announcements', async (req, res) => {
+      const query = {};
+      const page = parseInt(req.query.page);
+      const size = parseInt(req.query.size);
+      const result = await announcementCollection.find(query).skip(page * size).limit(size).toArray();
+      res.send(result);
+    });
+    app.get('/announcementsCount', async (req, res) => {
+      const count = await announcementCollection.estimatedDocumentCount();
+      res.send({ count });
+    });
+    app.post('/announcement', async (req, res) => {
+      const item = req.body;
+      const result = await announcementCollection.insertOne(item);
+      res.send(result);
+    });
+
+    // comments api
+
+    app.get('/comments', async (req, res) => {
+      const result = await commentCollection.find().toArray();
+      res.send(result);
+    });
+    app.get('/comment/:id', async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) }
+      // console.log(filter); 
+      const result = await commentCollection.findOne(filter);
+      res.send(result);
+    });
+    app.get('/postComments/:postId', async (req, res) => {
+      const postId = req.params.postId;
+      const filter = { postId: postId }
+      const page = parseInt(req.query.page);
+      const size = parseInt(req.query.size);
+      const result = await commentCollection.find(filter).skip(page * size).limit(size).toArray();
+      res.json(result);
+    });
+    app.get('/commentsCount/:id', async (req, res) => {
+      const id = req.params.id;
+      const filter = { postId: id }
+      const count = await commentCollection.countDocuments(filter);
+      res.send({ count });
+      // console.log(count);
+    });
+    app.post('/comments', async (req, res) => {
+      const item = req.body;
+      const result = await commentCollection.insertOne(item);
+      res.send(result);
+    });
+
+    //dashboard admin api
+    app.get('/admin-stats', verifyToken, verifyAdmin, async (req, res) => {
+      const post = await postsCollection.estimatedDocumentCount();
+      const user = await usersCollection.estimatedDocumentCount();
+      const comments = await commentCollection.estimatedDocumentCount();
+      res.send({
+        post,
+        user,
+        comments
+      });
+    })
+
+    //reports api
+    app.get('/reports', async (req, res) => {
+      const query = {};
+      const page = parseInt(req.query.page);
+      const size = parseInt(req.query.size);
+      const result = await reportCollection.find(query).skip(page * size).limit(size).toArray();
+      res.send(result);
+    });
+    app.get('/reportsCount', async (req, res) => {
+      const count = await reportCollection.estimatedDocumentCount();
+      res.send({ count });
+    });
+    app.post('/reports', async (req, res) => {
+      const item = req.body;
+      const result = await reportCollection.insertOne(item);
+      res.send(result);
+    });
+
+   // tags api
     app.get('/tags', async (req, res) => {
       const result = await tagsCollection.find().toArray();
       res.send(result);
@@ -329,36 +375,30 @@ async function run() {
       const result = await tagsCollection.insertOne(tagItem);
       res.send(result);
     });
-    app.delete('/post/:id', async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: new ObjectId(id) }
-      const result = await postsCollection.deleteOne(query);
-      res.send(result);
-    });
-
-    app.post("/payment", cors(), async (req, res) => {
-      let { amount, id } = req.body
-      try {
-        const payment = await stripe.paymentIntents.create({
-          amount,
-          currency: "USD",
-          description: "Spatula company",
-          payment_method: id,
-          confirm: true
-        })
-        console.log("Payment", payment)
-        res.json({
-          message: "Payment successful",
-          success: true
-        })
-      } catch (error) {
-        console.log("Error", error)
-        res.json({
-          message: "Payment failed",
-          success: false
-        })
-      }
-    })
+    
+    // app.post("/payment", cors(), async (req, res) => {
+    //   let { amount, id } = req.body
+    //   try {
+    //     const payment = await stripe.paymentIntents.create({
+    //       amount,
+    //       currency: "USD",
+    //       description: "Spatula company",
+    //       payment_method: id,
+    //       confirm: true
+    //     })
+    //     console.log("Payment", payment)
+    //     res.json({
+    //       message: "Payment successful",
+    //       success: true
+    //     })
+    //   } catch (error) {
+    //     console.log("Error", error)
+    //     res.json({
+    //       message: "Payment failed",
+    //       success: false
+    //     })
+    //   }
+    // })
 
     // // Send a ping to confirm a successful connection
     // await client.db("admin").command({ ping: 1 });
