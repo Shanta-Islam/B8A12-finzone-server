@@ -5,7 +5,7 @@ const cors = require('cors');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-const port = process.env.PORT || 5000; 
+const port = process.env.PORT || 5000;
 
 // middleware
 app.use(cors());
@@ -141,30 +141,34 @@ async function run() {
 
     });
     app.get('/posts', async (req, res) => {
-      const page = parseInt(req.query.page);
-      const size = parseInt(req.query.size);
       // const filter = req.query;
-      // const query = {};
-      // const options = {
-      //   sort :{
 
+      // console.log(filter);
+      // const query ={
+      //   tag: {
+      //     $regex: filter.search, $options: 'i'
       //   }
       // }
-      // const result1 = await postsCollection.aggregate([
-      //   {
-      //     $addFields: {
-      //     voteDifference:{$subtract: ["$upVote", "$downVote"]} 
-      //     }
-      //     },
-      //     {
-      //     $sort: { voteDifference: -1 }
-      //     }
+      const result1 = await postsCollection.aggregate([
+        {
+          $addFields: {
+            voteDifference: { $subtract: ["$upVote", "$downVote"] }
+          }
+        },
+        {
+          $sort: { voteDifference: -1 }
+        }
 
-      // ]).toArray();
-      // console.log(result1)
+      ]).toArray();
+      res.send(result1);
+      const page = parseInt(req.query.page);
+      const size = parseInt(req.query.size);
       const result = await postsCollection.find().skip(page * size).limit(size).sort({ date: -1 }).toArray();
+
       res.send(result);
     })
+    
+    
     app.get('/postsCount', async (req, res) => {
       const count = await postsCollection.estimatedDocumentCount();
       res.json({ count });
@@ -212,66 +216,40 @@ async function run() {
       res.send(result);
     });
 
-     // app.patch('/:id/like', async (req, res) => {
-    //   // const id = req.params.id;
-    //   // const query = { _id: new ObjectId(id) };
-    //   // const user = req.body;
-    //   // const filter = { email: user.email }
-    //   // const existingUser = await postsCollection.findOne(filter);
-    //   // console.log(existingUser)
-    //   // if (existingUser) {
-    //   //   return res.send({ message: 'user already exists', modifiedCount: null })
-    //   // }
-    //   // const updatedDoc = {
-    //   //   $inc: {
-    //   //     upVote: 1
-    //   //   }
-
-    //   // }
-    //   // const result = await postsCollection.updateOne(query, updatedDoc);
-    //   // res.send(result);
-
-    // });
-
-
-    // app.post('/:id/like/:email', async (req, res) => {
-    //   const id = req.params.id;
-    //   const email = req.params.email;
-    //   const query = { _id: new ObjectId(id), email: email };
-    //   const existingUser = await postsCollection.findOne(query);
-
-    //   // if (!existingUser) {
-    //   //   // User does not exist, you might want to handle this case accordingly
-    //   //   return res.send({ message: 'User not found', modifiedCount: null });
-    //   // }
-    //   console.log(existingUser)
-    //   // if (existingUser) {
-    //   //   return res.send({ message: 'User already upvoted', modifiedCount: null });
-    //   // }
-
-    //   // const updatedDoc = {
-    //   //   $inc: {
-    //   //     upVote: 1
-    //   //   }
-    //   // };
-
-    //   // const result = await postsCollection.updateOne(query, updatedDoc);
-    //   // res.send(result);
-    // });
-    app.post('/:id/dislike/:email', async (req, res) => {
+    app.patch('/:id/like', async (req, res) => {
       const id = req.params.id;
-      const email = req.params.email;
-      const query = { _id: new ObjectId(id), email: email };
-      const existingUser = await postsCollection.findOne(query);
+      const query = { _id: new ObjectId(id) };
+      const user = req.body;
+      const filter = { email: user.email }
+      // const existingUser = await postsCollection.findOne(filter);
+      // console.log(existingUser)
+      // if (existingUser) {
+      //   return res.send({ message: 'user already exists', modifiedCount: null })
+      // }
+      const updatedDoc = {
+        $inc: {
+          upVote: 1
+        }
 
-      if (!existingUser) {
-        // User does not exist, you might want to handle this case accordingly
-        return res.send({ message: 'User not found', modifiedCount: null });
       }
+      const result = await postsCollection.updateOne(query, updatedDoc);
+      res.send(result);
 
-      if (existingUser.downVote === 1) {
-        return res.send({ message: 'User already disliked', modifiedCount: null });
-      }
+    });
+
+    app.patch('/:id/dislike', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      // const existingUser = await postsCollection.findOne(query);
+
+      // if (!existingUser) {
+      //   // User does not exist, you might want to handle this case accordingly
+      //   return res.send({ message: 'User not found', modifiedCount: null });
+      // }
+
+      // if (existingUser) {
+      //   return res.send({ message: 'User already disliked', modifiedCount: null });
+      // }
 
       const updatedDoc = {
         $inc: {
@@ -365,7 +343,7 @@ async function run() {
       res.send(result);
     });
 
-   // tags api
+    // tags api
     app.get('/tags', async (req, res) => {
       const result = await tagsCollection.find().toArray();
       res.send(result);
@@ -375,7 +353,7 @@ async function run() {
       const result = await tagsCollection.insertOne(tagItem);
       res.send(result);
     });
-    
+
     // app.post("/payment", cors(), async (req, res) => {
     //   let { amount, id } = req.body
     //   try {
