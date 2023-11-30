@@ -36,7 +36,7 @@ async function run() {
     const commentCollection = client.db("finzoneUser").collection("comments");
     const tagsCollection = client.db("finzoneUser").collection("tags");
     const reportCollection = client.db("finzoneUser").collection("reports");
-
+    // const paymentCollection = client.db("finzoneUser").collection("payments");
 
 
 
@@ -167,21 +167,21 @@ async function run() {
 
       res.send(result);
     })
-    
-    
+
+
     app.get('/postsCount', async (req, res) => {
       const count = await postsCollection.estimatedDocumentCount();
       res.json({ count });
       // console.log(count)
 
     });
-    app.get('/recentPosts/:email', verifyToken,async (req, res) => {
+    app.get('/recentPosts/:email', verifyToken, async (req, res) => {
       const email = req.params.email;
       const query = { email: email };
       const result = await postsCollection.find(query).sort({ date: -1 }).limit(3).toArray();
       res.send(result);
     })
-    app.get('/posts/:email', verifyToken,async (req, res) => {
+    app.get('/posts/:email', verifyToken, async (req, res) => {
       const email = req.params.email;
       const query = { email: email };
       const page = parseInt(req.query.page);
@@ -216,7 +216,7 @@ async function run() {
       res.send(result);
     });
 
-    app.patch('/:id/like', verifyToken,async (req, res) => {
+    app.patch('/:id/like', verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const user = req.body;
@@ -237,7 +237,7 @@ async function run() {
 
     });
 
-    app.patch('/:id/dislike',verifyToken, async (req, res) => {
+    app.patch('/:id/dislike', verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       // const existingUser = await postsCollection.findOne(query);
@@ -273,7 +273,7 @@ async function run() {
       const count = await announcementCollection.estimatedDocumentCount();
       res.send({ count });
     });
-    app.post('/announcement',verifyToken, verifyAdmin, async (req, res) => {
+    app.post('/announcement', verifyToken, verifyAdmin, async (req, res) => {
       const item = req.body;
       const result = await announcementCollection.insertOne(item);
       res.send(result);
@@ -285,14 +285,14 @@ async function run() {
       const result = await commentCollection.find().toArray();
       res.send(result);
     });
-    app.get('/comment/:id',verifyToken, async (req, res) => {
+    app.get('/comment/:id', verifyToken, async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) }
       // console.log(filter); 
       const result = await commentCollection.findOne(filter);
       res.send(result);
     });
-    app.get('/postComments/:postId',verifyToken, async (req, res) => {
+    app.get('/postComments/:postId', verifyToken, async (req, res) => {
       const postId = req.params.postId;
       const filter = { postId: postId }
       const page = parseInt(req.query.page);
@@ -307,7 +307,7 @@ async function run() {
       res.send({ count });
       // console.log(count);
     });
-    app.post('/comments', verifyToken,async (req, res) => {
+    app.post('/comments', verifyToken, async (req, res) => {
       const item = req.body;
       const result = await commentCollection.insertOne(item);
       res.send(result);
@@ -326,7 +326,7 @@ async function run() {
     })
 
     //reports api
-    app.get('/reports', verifyToken, verifyAdmin,async (req, res) => {
+    app.get('/reports', verifyToken, verifyAdmin, async (req, res) => {
       const query = {};
       const page = parseInt(req.query.page);
       const size = parseInt(req.query.size);
@@ -354,29 +354,36 @@ async function run() {
       res.send(result);
     });
 
-    // app.post("/payment", cors(), async (req, res) => {
-    //   let { amount, id } = req.body
-    //   try {
-    //     const payment = await stripe.paymentIntents.create({
-    //       amount,
-    //       currency: "USD",
-    //       description: "Spatula company",
-    //       payment_method: id,
-    //       confirm: true
-    //     })
-    //     console.log("Payment", payment)
-    //     res.json({
-    //       message: "Payment successful",
-    //       success: true
-    //     })
-    //   } catch (error) {
-    //     console.log("Error", error)
-    //     res.json({
-    //       message: "Payment failed",
-    //       success: false
-    //     })
-    //   }
-    // })
+    // payment intent
+    app.post('/create-payment-intent', async (req, res) => {
+      const { price } = req.body;
+
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: parseFloat(price *100),
+        currency: 'usd',
+        payment_method_types: ['card']
+      });
+
+      res.send({
+        clientSecret: paymentIntent.client_secret
+      })
+      console.log(paymentIntent);
+    });
+
+
+    app.patch('/payments/:email', async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
+      const updatedDoc = {
+        $set: {
+          status: 'Membership'
+        }
+      };
+
+      const result = await usersCollection.updateOne(query, updatedDoc);
+      res.send(result);
+    });
+
 
     // // Send a ping to confirm a successful connection
     // await client.db("admin").command({ ping: 1 });
