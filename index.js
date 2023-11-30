@@ -149,18 +149,18 @@ async function run() {
       //     $regex: filter.search, $options: 'i'
       //   }
       // } 
-      const result1 = await postsCollection.aggregate([
-        {
-          $addFields: {
-            voteDifference: { $subtract: ["$upVote", "$downVote"] }
-          }
-        },
-        {
-          $sort: { voteDifference: -1 }
-        }
+      // const result1 = await postsCollection.aggregate([
+      //   {
+      //     $addFields: {
+      //       voteDifference: { $subtract: ["$upVote", "$downVote"] }
+      //     }
+      //   },
+      //   {
+      //     $sort: { voteDifference: -1 }
+      //   }
 
-      ]).toArray();
-      res.send(result1);
+      // ]).toArray();
+      // res.send(result1);
       const page = parseInt(req.query.page);
       const size = parseInt(req.query.size);
       const result = await postsCollection.find().skip(page * size).limit(size).sort({ date: -1 }).toArray();
