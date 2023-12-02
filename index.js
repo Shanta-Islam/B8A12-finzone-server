@@ -103,7 +103,7 @@ async function run() {
       const count = await usersCollection.estimatedDocumentCount();
       res.send({ count });
     });
-    app.get('/user/:email', async (req, res) => {
+    app.get('/user/:email', async (req, res) => { 
       const email = req.params.email;
       const query = { email: email };
       const user = await usersCollection.findOne(query);
