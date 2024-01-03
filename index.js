@@ -137,7 +137,7 @@ async function run() {
       const query = req.body;
       console.log(query);
       const result = await postsCollection.find().toArray();
-      res.json(result);
+      res.send(result);
 
     });
     app.get('/posts', async (req, res) => {
@@ -194,7 +194,7 @@ async function run() {
       const email = req.params.email;
       const query = { email: email };
       const count = await postsCollection.countDocuments(query);
-      res.json({ count });
+      res.send({ count });
       console.log(count)
 
     });
