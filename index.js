@@ -344,15 +344,15 @@ async function run() {
     });
 
     // tags api 
-    app.get('/tags', async (req, res) => {
-      const result = await tagsCollection.find().toArray();
-      res.send(result);
-    });
-    app.post('/tags', async (req, res) => {
-      const tagItem = req.body;
-      const result = await tagsCollection.insertOne(tagItem);
-      res.send(result);
-    });
+    // app.get('/tags', async (req, res) => {
+    //   const result = await tagsCollection.find().toArray();
+    //   res.send(result);
+    // });
+    // app.post('/tags', async (req, res) => {
+    //   const tagItem = req.body;
+    //   const result = await tagsCollection.insertOne(tagItem);
+    //   res.send(result);
+    // });
 
     // payment intent
     app.post('/create-payment-intent', async (req, res) => {
